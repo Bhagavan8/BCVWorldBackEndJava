@@ -7,6 +7,7 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.context.annotation.Configuration;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
@@ -16,28 +17,31 @@ public class FirebaseConfig {
     @PostConstruct
     public void init() {
         try {
-            // Read the entire JSON from environment variable
-            String firebaseCredentialsJson = System.getenv("FIREBASE_CREDENTIALS_JSON");
-            if (firebaseCredentialsJson == null || firebaseCredentialsJson.isEmpty()) {
+            // Read the Firebase credentials JSON from environment variable
+            String json = System.getenv("FIREBASE_CONFIG_BASE64");
+
+            if (json == null || json.isEmpty()) {
                 throw new IllegalStateException("Missing FIREBASE_CREDENTIALS_JSON environment variable");
             }
 
-            // Convert String to InputStream
-            InputStream serviceAccount = new ByteArrayInputStream(firebaseCredentialsJson.getBytes(StandardCharsets.UTF_8));
+            // Convert the JSON string into an InputStream
+            InputStream serviceAccount = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
 
+            // Build FirebaseOptions with credentials
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                    .setDatabaseUrl("https://your-project-id.firebaseio.com")
                     .build();
 
+            // Initialize Firebase app only if not already initialized
             if (FirebaseApp.getApps().isEmpty()) {
                 FirebaseApp.initializeApp(options);
-                System.out.println("Firebase initialized successfully");
+                System.out.println("Firebase has been initialized successfully.");
+            } else {
+                System.out.println("Firebase app already initialized.");
             }
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("Firebase initialization failed", e);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to initialize Firebase", e);
         }
     }
 }
